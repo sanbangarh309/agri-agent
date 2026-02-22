@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -7,6 +7,17 @@ export default function AgriAgent() {
   const [location, setLocation] = useState("Kurukshetra, Haryana");
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(false);
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem("agri_theme") || "dark"
+  );
+
+  const API_BASE = "https://api-agri-agent.aryaorganicfarm.com";
+
+  useEffect(() => {
+    localStorage.setItem("agri_theme", theme);
+  }, [theme]);
+
+  const isDark = theme === "dark";
 
   const ask = async () => {
     if (!question.trim()) return;
@@ -18,7 +29,7 @@ export default function AgriAgent() {
       localStorage.getItem("agri_session_id") || crypto.randomUUID();
     localStorage.setItem("agri_session_id", sessionId);
 
-    const res = await fetch(`http://localhost:5000/api/agri/${sessionId}`, {
+    const res = await fetch(`${API_BASE}/api/agri/${sessionId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question, location }),
@@ -39,11 +50,6 @@ export default function AgriAgent() {
         if (!evt.startsWith("data: ")) continue;
         const payload = JSON.parse(evt.replace("data: ", ""));
 
-        if (payload.done) {
-          setLoading(false);
-          return;
-        }
-
         if (payload.token) {
           full += payload.token;
           setReply(full);
@@ -59,68 +65,92 @@ export default function AgriAgent() {
       style={{
         minHeight: "100vh",
         width: "100vw",
-        background: "radial-gradient(circle at top, #1f2933, #0b0f14)",
+        background: isDark
+          ? "radial-gradient(circle at top, #1f2933, #0b0f14)"
+          : "linear-gradient(135deg, #eef2ff, #f8fafc)",
         padding: 20,
         boxSizing: "border-box",
       }}
     >
-      {/* Outer container for ultra-wide screens */}
       <div
         style={{
-          maxWidth: 1400,              // 👈 cap width for readability
+          maxWidth: 1400,
           margin: "0 auto",
           display: "grid",
-          gridTemplateColumns: "360px 1fr", // 👈 left input, right output
+          gridTemplateColumns: "360px 1fr",
           gap: 20,
           height: "calc(100vh - 40px)",
         }}
       >
-        {/* Left: Input Panel */}
+        {/* Left Panel */}
         <div
           style={{
-            background: "#0f172a",
+            background: isDark ? "#0f172a" : "#ffffff",
             borderRadius: 16,
             padding: 16,
-            boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
-            color: "#e5e7eb",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.2)",
+            color: isDark ? "#e5e7eb" : "#0f172a",
             display: "flex",
             flexDirection: "column",
           }}
         >
-          <h2 style={{ textAlign: "center", marginBottom: 12 }}>
-            🌾 Agri Advisor
-          </h2>
+          {/* Header with Theme Toggle */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 12,
+            }}
+          >
+            <h2 style={{ margin: 0 }}>🌾 Agri Advisor</h2>
 
-          <label style={{ fontSize: 12, color: "#9ca3af" }}>Location</label>
+            <button
+              onClick={() => setTheme(isDark ? "light" : "dark")}
+              title="Toggle theme"
+              style={{
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                fontSize: 20,
+              }}
+            >
+              {isDark ? "☀️" : "🌙"}
+            </button>
+          </div>
+
+          <label style={{ fontSize: 12, color: isDark ? "#9ca3af" : "#475569" }}>
+            Location
+          </label>
           <input
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            placeholder="e.g., Kurukshetra, Haryana"
             style={{
               width: "100%",
               padding: 10,
               borderRadius: 10,
-              border: "1px solid #334155",
-              background: "#020617",
-              color: "#e5e7eb",
+              border: "1px solid #cbd5f5",
+              background: isDark ? "#020617" : "#f8fafc",
+              color: isDark ? "#e5e7eb" : "#0f172a",
               outline: "none",
               marginBottom: 10,
             }}
           />
 
-          <label style={{ fontSize: 12, color: "#9ca3af" }}>Your Question</label>
+          <label style={{ fontSize: 12, color: isDark ? "#9ca3af" : "#475569" }}>
+            Your Question
+          </label>
           <textarea
             rows={6}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Ask about crops, pests, irrigation, selling produce..."
             style={{
               width: "100%",
               padding: 10,
               borderRadius: 10,
-              border: "1px solid #334155",
-              background: "#020617",
-              color: "#e5e7eb",
+              border: "1px solid #cbd5f5",
+              background: isDark ? "#020617" : "#f8fafc",
+              color: isDark ? "#e5e7eb" : "#0f172a",
               outline: "none",
               resize: "vertical",
               flexGrow: 1,
@@ -137,48 +167,34 @@ export default function AgriAgent() {
               borderRadius: 12,
               border: "none",
               background: loading
-                ? "#14532d"
+                ? "#86efac"
                 : "linear-gradient(135deg, #16a34a, #22c55e)",
-              color: "#ecfdf5",
+              color: "#022c22",
               fontWeight: 700,
               cursor: loading ? "not-allowed" : "pointer",
-              letterSpacing: 0.3,
             }}
           >
             {loading ? "Thinking..." : "Ask Advisor"}
           </button>
         </div>
 
-        {/* Right: Output Panel */}
+        {/* Output Panel */}
         <div
           style={{
-            background: "#020617",
+            background: isDark ? "#020617" : "#ffffff",
             borderRadius: 16,
             padding: 20,
-            boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
-            color: "#e5e7eb",
-            overflow: "auto",            // 👈 scroll for long answers
+            boxShadow: "0 20px 50px rgba(0,0,0,0.2)",
+            color: isDark ? "#e5e7eb" : "#0f172a",
+            overflow: "auto",
           }}
         >
           {reply ? (
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                h2: ({ node, ...props }) => (
-                  <h2 style={{ color: "#86efac", marginTop: 16 }} {...props} />
-                ),
-                li: ({ node, ...props }) => (
-                  <li style={{ marginLeft: 18, marginBottom: 4 }} {...props} />
-                ),
-                p: ({ node, ...props }) => (
-                  <p style={{ lineHeight: 1.7, marginBottom: 10 }} {...props} />
-                ),
-              }}
-            >
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {reply}
             </ReactMarkdown>
           ) : (
-            <div style={{ color: "#64748b" }}>
+            <div style={{ color: isDark ? "#64748b" : "#475569" }}>
               Ask a question to see advice here…
             </div>
           )}
